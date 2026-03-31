@@ -29,6 +29,10 @@ let sentence = [];
 let predictions = [];
 let ctx = overlayCanvas.getContext('2d');
 
+// IMPORTANT: Replace this with your ngrok URL after step 3
+// You will update this URL after ngrok is running
+let WEBSOCKET_URL = 'wss://YOUR_NGROK_URL.ngrok.io';  // ← UPDATE THIS
+
 // Gesture mapping
 const gestureMap = {
     0: 'hello',
@@ -144,11 +148,11 @@ async function startDetection() {
         
         await video.play();
         
-        // Connect WebSocket
-        ws = new WebSocket('ws://localhost:8765');
+        // Connect WebSocket using ngrok URL
+        ws = new WebSocket(WEBSOCKET_URL);
         
         ws.onopen = () => {
-            console.log('WebSocket connected');
+            console.log('WebSocket connected to ngrok');
             isDetecting = true;
             startBtn.disabled = true;
             stopBtn.disabled = false;
@@ -162,13 +166,13 @@ async function startDetection() {
         
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
-            showError('Connection error. Make sure the backend is running.');
+            showError('Connection error. Make sure the backend is running and ngrok URL is correct.');
         };
         
         ws.onclose = () => {
             console.log('WebSocket closed');
             if (isDetecting) {
-                showError('Connection lost. Please restart detection.');
+                showError('Connection lost. Please refresh and restart detection.');
             }
         };
         
@@ -181,31 +185,36 @@ async function startDetection() {
     }
 }
 
-// Send frames to backend
+// Send frames to backend via WebSocket
 async function sendFrames() {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    
     async function sendFrame() {
         if (!isDetecting || !ws || ws.readyState !== WebSocket.OPEN) {
             requestAnimationFrame(sendFrame);
             return;
         }
         
+        const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        canvas.toBlob((blob) => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(blob);
-            }
-        }, 'image/jpeg', 0.8);
+        // Convert to base64 for sending
+        const imageData = canvas.toDataURL('image/jpeg', 0.7);
+        
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(imageData);
+        }
         
         requestAnimationFrame(sendFrame);
     }
     
-    requestAnimationFrame(sendFrame);
+    // Wait for video to have dimensions
+    if (video.videoWidth > 0) {
+        requestAnimationFrame(sendFrame);
+    } else {
+        video.addEventListener('loadedmetadata', () => requestAnimationFrame(sendFrame));
+    }
 }
 
 // Update UI with predictions
@@ -403,7 +412,7 @@ function showError(message) {
     if (badge) {
         badge.innerHTML = `
             <span class="prediction-label" style="color: #ef4444;">⚠️ Error</span>
-            <span class="prediction-confidence">${message}</span>
+            <span class="prediction-confidence" style="font-size: 10px;">${message}</span>
         `;
         setTimeout(() => {
             if (!isDetecting) {
@@ -425,4 +434,5 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // Initialize
-init();
+init();// DOM Elements
+
