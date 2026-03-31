@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Model files
+*.h5
+*.hdf5
+*.ckpt
+*.pb
+
+# Data
+data/MP_Data/
+*.npy
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Web
+node_modules/
+dist/
+.env
