@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>SignSpeak Fixed</title></head>
+<body>
+<h1>SignSpeak Working Version</h1>
+<button onclick="start()">Start</button>
+<script>
+let ws;
+async function start(){
+    ws = new WebSocket("ws://localhost:8765");
+    ws.onmessage = (e)=>console.log(e.data);
+}
+</script>
+</body>
+</html>
