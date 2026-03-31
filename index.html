@@ -1,15 +1,197 @@
 <!DOCTYPE html>
-<html>
-<head><title>SignSpeak Fixed</title></head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SignSpeak | Real-Time Sign Language Detection</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
 <body>
-<h1>SignSpeak Working Version</h1>
-<button onclick="start()">Start</button>
-<script>
-let ws;
-async function start(){
-    ws = new WebSocket("ws://localhost:8765");
-    ws.onmessage = (e)=>console.log(e.data);
-}
-</script>
+    <div class="cursor-glow"></div>
+    
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-hands"></i>
+                <span>SignSpeak</span>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="active">Home</a>
+                <a href="#">About</a>
+                <a href="#">Documentation</a>
+                <a href="#">Contact</a>
+            </div>
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="hero-section">
+            <div class="hero-content">
+                <span class="badge">AI-Powered</span>
+                <h1 class="hero-title">
+                    Bridge the Gap with
+                    <span class="gradient-text">Sign Language AI</span>
+                </h1>
+                <p class="hero-desc">
+                    Real-time sign language detection using advanced LSTM neural networks. 
+                    Communicate seamlessly with our cutting-edge technology.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" id="startDetection">
+                        <i class="fas fa-play"></i> Start Detection
+                    </button>
+                    <button class="btn-secondary" id="stopDetection" disabled>
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                    <button class="btn-outline" id="openSettings">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Gestures</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">30ms</div>
+                    <div class="stat-label">Latency</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detection-section">
+            <div class="section-header">
+                <h2>Live Detection</h2>
+                <div class="mode-switch">
+                    <button class="mode-btn active" data-mode="standard">
+                        <i class="fas fa-video"></i> Standard
+                    </button>
+                    <button class="mode-btn" data-mode="advanced">
+                        <i class="fas fa-chart-line"></i> Advanced
+                    </button>
+                    <button class="mode-btn" data-mode="batch">
+                        <i class="fas fa-layer-group"></i> Batch
+                    </button>
+                </div>
+            </div>
+            
+            <div class="detection-container">
+                <div class="video-wrapper">
+                    <video id="videoFeed" autoplay playsinline></video>
+                    <canvas id="overlayCanvas"></canvas>
+                    <div class="detection-overlay" id="detectionOverlay">
+                        <div class="prediction-badge" id="predictionBadge">
+                            <span class="prediction-label">Detecting...</span>
+                            <span class="prediction-confidence" id="confidenceValue">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <div class="panel-section">
+                        <h3><i class="fas fa-comment"></i> Current Sentence</h3>
+                        <div class="sentence-display" id="sentenceDisplay">
+                            <span class="placeholder">No gestures detected yet...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h3><i class="fas fa-chart-simple"></i> Confidence Scores</h3>
+                        <div class="confidence-bars" id="confidenceBars">
+                            <div class="confidence-item">
+                                <span class="label">Hello</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="hello" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confHello">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">Thanks</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="thanks" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confThanks">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">I Love You</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="iloveyou" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confIloveyou">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-section">
+                        <h3><i class="fas fa-history"></i> Recent Predictions</h3>
+                        <div class="history-list" id="historyList">
+                            <div class="history-placeholder">No predictions yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gestures-section">
+            <h2>Supported Gestures</h2>
+            <div class="gestures-grid">
+                <div class="gesture-card">
+                    <div class="gesture-icon">👋</div>
+                    <h3>Hello</h3>
+                    <p>Wave your hand or raise palm</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">👍</div>
+                    <h3>Thanks</h3>
+                    <p>Thumbs up or hand to chin</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">🤟</div>
+                    <h3>I Love You</h3>
+                    <p>ILY hand sign</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label>Confidence Threshold</label>
+                    <input type="range" id="thresholdSlider" min="0" max="100" value="70">
+                    <span id="thresholdValue">70%</span>
+                </div>
+                <div class="setting-group">
+                    <label>Camera Device</label>
+                    <select id="cameraSelect"></select>
+                </div>
+                <div class="setting-group">
+                    <label>Detection Mode</label>
+                    <select id="detectionModeSelect">
+                        <option value="standard">Standard (Low Latency)</option>
+                        <option value="advanced">Advanced (High Accuracy)</option>
+                        <option value="batch">Batch (Stable)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
