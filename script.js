@@ -17,6 +17,7 @@ const confidenceValues = {
     thanks: document.getElementById('confThanks'),
     iloveyou: document.getElementById('confIloveyou')
 };
+const confidenceBars = document.querySelectorAll('.bar');
 
 // State Variables
 let stream = null;
@@ -25,29 +26,19 @@ let ws = null;
 let currentMode = 'standard';
 let confidenceThreshold = 0.7;
 let sentence = [];
+let predictions = [];
 let ctx = overlayCanvas.getContext('2d');
-let frameInterval = null;
-let useMockData = true; // Will auto-switch to mock if no backend
 
-// IMPORTANT: Update this URL after running ngrok!
-// Run: ngrok http 8765
-// Then copy the wss:// URL (e.g., wss://abc123.ngrok.io)
-let WEBSOCKET_URL = 'ws://localhost:8765';  // Change this to your ngrok URL
-
-// Try to detect if we're on GitHub Pages
-const isGitHubPages = window.location.hostname.includes('github.io');
-if (isGitHubPages) {
-    console.log('Running on GitHub Pages - Make sure to update WEBSOCKET_URL with ngrok URL');
-    // Show a helpful message
-    const helpMessage = document.createElement('div');
-    helpMessage.style.cssText = 'position:fixed;top:80px;right:20px;background:#6366f1;color:white;padding:10px;border-radius:8px;z-index:9999;font-size:12px;';
-    helpMessage.innerHTML = '⚠️ Backend not connected. Run ngrok and update WEBSOCKET_URL';
-    document.body.appendChild(helpMessage);
-    setTimeout(() => helpMessage.remove(), 5000);
-}
+// WebSocket URL - Update this when you have backend running
+let WEBSOCKET_URL = 'ws://localhost:8765';  // Change this to your ngrok URL for production
 
 // Gesture mapping
-const gestureMap = { 0: 'hello', 1: 'thanks', 2: 'iloveyou' };
+const gestureMap = {
+    0: 'hello',
+    1: 'thanks',
+    2: 'iloveyou'
+};
+
 const gestureLabels = {
     hello: 'Hello 👋',
     thanks: 'Thanks 👍',
@@ -59,7 +50,6 @@ async function init() {
     await loadCameras();
     setupEventListeners();
     animateOverlay();
-    console.log('✅ SignSpeak Frontend Ready');
 }
 
 // Load available cameras
@@ -91,10 +81,6 @@ function setupEventListeners() {
     thresholdSlider.addEventListener('input', (e) => {
         confidenceThreshold = e.target.value / 100;
         thresholdValue.textContent = `${e.target.value}%`;
-        // Send config update if connected
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ threshold: confidenceThreshold }));
-        }
     });
     
     modeBtns.forEach(btn => {
@@ -104,10 +90,6 @@ function setupEventListeners() {
             currentMode = btn.dataset.mode;
             if (detectionModeSelect) {
                 detectionModeSelect.value = currentMode;
-            }
-            // Send mode change to backend
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ mode: currentMode }));
             }
         });
     });
@@ -121,9 +103,6 @@ function setupEventListeners() {
                 btn.classList.remove('active');
             }
         });
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ mode: currentMode }));
-        }
     });
     
     cameraSelect.addEventListener('change', async () => {
@@ -165,21 +144,19 @@ async function startDetection() {
             video: { deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined }
         });
         video.srcObject = stream;
+        
         await video.play();
         
-        // Try to connect to WebSocket
+        // Try to connect to WebSocket, if fails use demo mode
         try {
             ws = new WebSocket(WEBSOCKET_URL);
             
             ws.onopen = () => {
-                console.log('✅ WebSocket connected to backend');
-                useMockData = false;
+                console.log('WebSocket connected');
                 isDetecting = true;
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
                 startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
-                // Send initial config
-                ws.send(JSON.stringify({ mode: currentMode, threshold: confidenceThreshold }));
             };
             
             ws.onmessage = (event) => {
@@ -189,25 +166,18 @@ async function startDetection() {
             
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                useMockData = true;
                 startMockDetection();
             };
             
             ws.onclose = () => {
-                console.log('WebSocket closed, using mock data');
+                console.log('WebSocket closed');
                 if (isDetecting) {
-                    useMockData = true;
                     startMockDetection();
                 }
             };
             
-            // Send frames if WebSocket connects
-            if (!useMockData) {
-                sendFrames();
-            }
+            sendFrames();
         } catch (error) {
-            console.log('Could not connect to backend, using mock data');
-            useMockData = true;
             startMockDetection();
         }
         
@@ -217,25 +187,26 @@ async function startDetection() {
     }
 }
 
-// Mock detection for demo/testing
+// Mock detection for demo when backend not available
+let mockInterval;
 function startMockDetection() {
     isDetecting = true;
     startBtn.disabled = true;
     stopBtn.disabled = false;
-    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Demo Mode';
+    startBtn.innerHTML = '<i class="fas fa-video"></i> Demo Mode';
     
     const gestures = ['hello', 'thanks', 'iloveyou'];
     let idx = 0;
     
-    if (frameInterval) clearInterval(frameInterval);
-    frameInterval = setInterval(() => {
+    if (mockInterval) clearInterval(mockInterval);
+    mockInterval = setInterval(() => {
         if (!isDetecting) return;
         const gesture = gestures[idx % gestures.length];
         const scores = [0.1, 0.1, 0.1];
-        scores[gestures.indexOf(gesture)] = 0.85 + Math.random() * 0.1;
+        scores[idx % gestures.length] = 0.85 + Math.random() * 0.1;
         updateUI({
             prediction: gesture,
-            confidence: scores[gestures.indexOf(gesture)],
+            confidence: scores[idx % gestures.length],
             sentence: [gesture],
             confidence_scores: scores
         });
@@ -246,26 +217,21 @@ function startMockDetection() {
 // Send frames to backend via WebSocket
 async function sendFrames() {
     async function sendFrame() {
-        if (!isDetecting || !ws || ws.readyState !== WebSocket.OPEN || useMockData) {
-            if (isDetecting && !useMockData) {
-                requestAnimationFrame(sendFrame);
-            }
+        if (!isDetecting || !ws || ws.readyState !== WebSocket.OPEN) {
+            requestAnimationFrame(sendFrame);
             return;
         }
         
-        if (video.videoWidth > 0) {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Convert to base64 for sending
-            const imageData = canvas.toDataURL('image/jpeg', 0.7);
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(imageData);
-            }
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = canvas.toDataURL('image/jpeg', 0.7);
+        
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(imageData);
         }
         
         requestAnimationFrame(sendFrame);
@@ -282,24 +248,25 @@ async function sendFrames() {
 function updateUI(data) {
     const { prediction, confidence, sentence: newSentence, confidence_scores } = data;
     
-    // Update sentence display
     if (newSentence && newSentence.length > 0) {
         sentence = newSentence;
         updateSentenceDisplay();
     }
     
-    // Update confidence bars
     if (confidence_scores) {
         updateConfidenceBars(confidence_scores);
     }
     
-    // Update prediction badge
     const badge = document.getElementById('predictionBadge');
     if (badge && prediction) {
         badge.innerHTML = `
             <span class="prediction-label">${gestureLabels[prediction] || prediction}</span>
             <span class="prediction-confidence">${Math.round(confidence * 100)}%</span>
         `;
+    }
+    
+    if (confidenceValues[prediction]) {
+        confidenceValues[prediction].textContent = `${Math.round(confidence * 100)}%`;
     }
 }
 
@@ -357,11 +324,10 @@ function addToHistory(gesture) {
 // Stop detection
 function stopDetection() {
     isDetecting = false;
-    useMockData = true;
     
-    if (frameInterval) {
-        clearInterval(frameInterval);
-        frameInterval = null;
+    if (mockInterval) {
+        clearInterval(mockInterval);
+        mockInterval = null;
     }
     
     if (ws) {
@@ -379,7 +345,6 @@ function stopDetection() {
     stopBtn.disabled = true;
     startBtn.innerHTML = '<i class="fas fa-play"></i> Start Detection';
     
-    // Clear UI
     sentenceDisplay.innerHTML = '<span class="placeholder">No gestures detected yet...</span>';
     updateConfidenceBars([0, 0, 0]);
     
@@ -423,6 +388,7 @@ function animateOverlay() {
             ctx.lineTo(overlayCanvas.width, scanY);
             ctx.stroke();
             
+            const cornerSize = 30;
             ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
             ctx.lineWidth = 3;
             
