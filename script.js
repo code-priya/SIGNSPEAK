@@ -17,7 +17,6 @@ const confidenceValues = {
     thanks: document.getElementById('confThanks'),
     iloveyou: document.getElementById('confIloveyou')
 };
-const confidenceBars = document.querySelectorAll('.bar');
 
 // State Variables
 let stream = null;
@@ -26,20 +25,29 @@ let ws = null;
 let currentMode = 'standard';
 let confidenceThreshold = 0.7;
 let sentence = [];
-let predictions = [];
 let ctx = overlayCanvas.getContext('2d');
+let frameInterval = null;
+let useMockData = true; // Will auto-switch to mock if no backend
 
-// IMPORTANT: Replace this with your ngrok URL after step 3
-// You will update this URL after ngrok is running
-let WEBSOCKET_URL = 'wss://YOUR_NGROK_URL.ngrok.io';  // ← UPDATE THIS
+// IMPORTANT: Update this URL after running ngrok!
+// Run: ngrok http 8765
+// Then copy the wss:// URL (e.g., wss://abc123.ngrok.io)
+let WEBSOCKET_URL = 'ws://localhost:8765';  // Change this to your ngrok URL
+
+// Try to detect if we're on GitHub Pages
+const isGitHubPages = window.location.hostname.includes('github.io');
+if (isGitHubPages) {
+    console.log('Running on GitHub Pages - Make sure to update WEBSOCKET_URL with ngrok URL');
+    // Show a helpful message
+    const helpMessage = document.createElement('div');
+    helpMessage.style.cssText = 'position:fixed;top:80px;right:20px;background:#6366f1;color:white;padding:10px;border-radius:8px;z-index:9999;font-size:12px;';
+    helpMessage.innerHTML = '⚠️ Backend not connected. Run ngrok and update WEBSOCKET_URL';
+    document.body.appendChild(helpMessage);
+    setTimeout(() => helpMessage.remove(), 5000);
+}
 
 // Gesture mapping
-const gestureMap = {
-    0: 'hello',
-    1: 'thanks',
-    2: 'iloveyou'
-};
-
+const gestureMap = { 0: 'hello', 1: 'thanks', 2: 'iloveyou' };
 const gestureLabels = {
     hello: 'Hello 👋',
     thanks: 'Thanks 👍',
@@ -51,6 +59,7 @@ async function init() {
     await loadCameras();
     setupEventListeners();
     animateOverlay();
+    console.log('✅ SignSpeak Frontend Ready');
 }
 
 // Load available cameras
@@ -82,6 +91,10 @@ function setupEventListeners() {
     thresholdSlider.addEventListener('input', (e) => {
         confidenceThreshold = e.target.value / 100;
         thresholdValue.textContent = `${e.target.value}%`;
+        // Send config update if connected
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ threshold: confidenceThreshold }));
+        }
     });
     
     modeBtns.forEach(btn => {
@@ -91,6 +104,10 @@ function setupEventListeners() {
             currentMode = btn.dataset.mode;
             if (detectionModeSelect) {
                 detectionModeSelect.value = currentMode;
+            }
+            // Send mode change to backend
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ mode: currentMode }));
             }
         });
     });
@@ -104,6 +121,9 @@ function setupEventListeners() {
                 btn.classList.remove('active');
             }
         });
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ mode: currentMode }));
+        }
     });
     
     cameraSelect.addEventListener('change', async () => {
@@ -145,39 +165,51 @@ async function startDetection() {
             video: { deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined }
         });
         video.srcObject = stream;
-        
         await video.play();
         
-        // Connect WebSocket using ngrok URL
-        ws = new WebSocket(WEBSOCKET_URL);
-        
-        ws.onopen = () => {
-            console.log('WebSocket connected to ngrok');
-            isDetecting = true;
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
-        };
-        
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            updateUI(data);
-        };
-        
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            showError('Connection error. Make sure the backend is running and ngrok URL is correct.');
-        };
-        
-        ws.onclose = () => {
-            console.log('WebSocket closed');
-            if (isDetecting) {
-                showError('Connection lost. Please refresh and restart detection.');
+        // Try to connect to WebSocket
+        try {
+            ws = new WebSocket(WEBSOCKET_URL);
+            
+            ws.onopen = () => {
+                console.log('✅ WebSocket connected to backend');
+                useMockData = false;
+                isDetecting = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+                // Send initial config
+                ws.send(JSON.stringify({ mode: currentMode, threshold: confidenceThreshold }));
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateUI(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                useMockData = true;
+                startMockDetection();
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket closed, using mock data');
+                if (isDetecting) {
+                    useMockData = true;
+                    startMockDetection();
+                }
+            };
+            
+            // Send frames if WebSocket connects
+            if (!useMockData) {
+                sendFrames();
             }
-        };
-        
-        // Send video frames
-        sendFrames();
+        } catch (error) {
+            console.log('Could not connect to backend, using mock data');
+            useMockData = true;
+            startMockDetection();
+        }
         
     } catch (error) {
         console.error('Error starting detection:', error);
@@ -185,31 +217,60 @@ async function startDetection() {
     }
 }
 
+// Mock detection for demo/testing
+function startMockDetection() {
+    isDetecting = true;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Demo Mode';
+    
+    const gestures = ['hello', 'thanks', 'iloveyou'];
+    let idx = 0;
+    
+    if (frameInterval) clearInterval(frameInterval);
+    frameInterval = setInterval(() => {
+        if (!isDetecting) return;
+        const gesture = gestures[idx % gestures.length];
+        const scores = [0.1, 0.1, 0.1];
+        scores[gestures.indexOf(gesture)] = 0.85 + Math.random() * 0.1;
+        updateUI({
+            prediction: gesture,
+            confidence: scores[gestures.indexOf(gesture)],
+            sentence: [gesture],
+            confidence_scores: scores
+        });
+        idx++;
+    }, 1500);
+}
+
 // Send frames to backend via WebSocket
 async function sendFrames() {
     async function sendFrame() {
-        if (!isDetecting || !ws || ws.readyState !== WebSocket.OPEN) {
-            requestAnimationFrame(sendFrame);
+        if (!isDetecting || !ws || ws.readyState !== WebSocket.OPEN || useMockData) {
+            if (isDetecting && !useMockData) {
+                requestAnimationFrame(sendFrame);
+            }
             return;
         }
         
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert to base64 for sending
-        const imageData = canvas.toDataURL('image/jpeg', 0.7);
-        
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(imageData);
+        if (video.videoWidth > 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to base64 for sending
+            const imageData = canvas.toDataURL('image/jpeg', 0.7);
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(imageData);
+            }
         }
         
         requestAnimationFrame(sendFrame);
     }
     
-    // Wait for video to have dimensions
     if (video.videoWidth > 0) {
         requestAnimationFrame(sendFrame);
     } else {
@@ -240,11 +301,6 @@ function updateUI(data) {
             <span class="prediction-confidence">${Math.round(confidence * 100)}%</span>
         `;
     }
-    
-    // Update confidence values
-    if (confidenceValues[prediction]) {
-        confidenceValues[prediction].textContent = `${Math.round(confidence * 100)}%`;
-    }
 }
 
 // Update sentence display
@@ -256,8 +312,6 @@ function updateSentenceDisplay() {
     
     const sentenceText = sentence.map(g => gestureLabels[g] || g).join(' → ');
     sentenceDisplay.innerHTML = sentenceText;
-    
-    // Add to history
     addToHistory(sentence[sentence.length - 1]);
 }
 
@@ -290,12 +344,10 @@ function addToHistory(gesture) {
     
     historyList.insertBefore(historyItem, historyList.firstChild);
     
-    // Keep only last 10 items
     while (historyList.children.length > 10) {
         historyList.removeChild(historyList.lastChild);
     }
     
-    // Remove placeholder if exists
     const placeholder = historyList.querySelector('.history-placeholder');
     if (placeholder) {
         placeholder.remove();
@@ -305,6 +357,12 @@ function addToHistory(gesture) {
 // Stop detection
 function stopDetection() {
     isDetecting = false;
+    useMockData = true;
+    
+    if (frameInterval) {
+        clearInterval(frameInterval);
+        frameInterval = null;
+    }
     
     if (ws) {
         ws.close();
@@ -355,7 +413,6 @@ function animateOverlay() {
         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         
         if (isDetecting) {
-            // Draw scanning effect
             const time = Date.now() / 1000;
             const scanY = (Math.sin(time * 2) + 1) / 2 * overlayCanvas.height;
             
@@ -366,33 +423,27 @@ function animateOverlay() {
             ctx.lineTo(overlayCanvas.width, scanY);
             ctx.stroke();
             
-            // Draw corner brackets
-            const cornerSize = 30;
             ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
             ctx.lineWidth = 3;
             
-            // Top-left
             ctx.beginPath();
             ctx.moveTo(10, 20);
             ctx.lineTo(10, 10);
             ctx.lineTo(20, 10);
             ctx.stroke();
             
-            // Top-right
             ctx.beginPath();
             ctx.moveTo(overlayCanvas.width - 10, 20);
             ctx.lineTo(overlayCanvas.width - 10, 10);
             ctx.lineTo(overlayCanvas.width - 20, 10);
             ctx.stroke();
             
-            // Bottom-left
             ctx.beginPath();
             ctx.moveTo(10, overlayCanvas.height - 20);
             ctx.lineTo(10, overlayCanvas.height - 10);
             ctx.lineTo(20, overlayCanvas.height - 10);
             ctx.stroke();
             
-            // Bottom-right
             ctx.beginPath();
             ctx.moveTo(overlayCanvas.width - 10, overlayCanvas.height - 20);
             ctx.lineTo(overlayCanvas.width - 10, overlayCanvas.height - 10);
@@ -434,5 +485,4 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // Initialize
-init();// DOM Elements
-
+init();
