@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SignSpeak Pro | Advanced Sign Language Detection</title>
+    <title>SignSpeak | Real-Time Sign Language Detection</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,8 +15,7 @@
         <div class="nav-container">
             <div class="logo">
                 <i class="fas fa-hands"></i>
-                <span>SignSpeak Pro</span>
-                <span class="badge-new">AI-Powered</span>
+                <span>SignSpeak</span>
             </div>
             <div class="nav-links">
                 <a href="#" class="active">Home</a>
@@ -24,28 +23,23 @@
                 <a href="#">Documentation</a>
                 <a href="#">Contact</a>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="voice-btn" id="voiceOutputBtn">
-                    <i class="fas fa-volume-up"></i> Voice
-                </button>
-                <button class="theme-toggle" id="themeToggle">
-                    <i class="fas fa-moon"></i>
-                </button>
-            </div>
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fas fa-moon"></i>
+            </button>
         </div>
     </nav>
 
     <main class="main">
         <div class="hero-section">
             <div class="hero-content">
-                <span class="badge">CNN + LSTM Hybrid • Real-time</span>
+                <span class="badge">AI-Powered</span>
                 <h1 class="hero-title">
-                    Advanced Sign Language
-                    <span class="gradient-text">Detection System</span>
+                    Bridge the Gap with
+                    <span class="gradient-text">Sign Language AI</span>
                 </h1>
                 <p class="hero-desc">
-                    Real-time sign language detection using hybrid CNN+LSTM neural networks with MediaPipe integration.
-                    Supports 15+ gestures with 98% accuracy.
+                    Real-time sign language detection using advanced LSTM neural networks. 
+                    Communicate seamlessly with our cutting-edge technology.
                 </p>
                 <div class="hero-buttons">
                     <button class="btn-primary" id="startDetection">
@@ -57,14 +51,11 @@
                     <button class="btn-outline" id="openSettings">
                         <i class="fas fa-cog"></i> Settings
                     </button>
-                    <button class="btn-outline" id="clearHistoryBtn">
-                        <i class="fas fa-trash-alt"></i> Clear
-                    </button>
                 </div>
             </div>
             <div class="hero-stats">
                 <div class="stat-card">
-                    <div class="stat-number" id="statGestures">15</div>
+                    <div class="stat-number">3</div>
                     <div class="stat-label">Gestures</div>
                 </div>
                 <div class="stat-card">
@@ -72,18 +63,18 @@
                     <div class="stat-label">Accuracy</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="statFps">0</div>
-                    <div class="stat-label">FPS</div>
+                    <div class="stat-number">30ms</div>
+                    <div class="stat-label">Latency</div>
                 </div>
             </div>
         </div>
 
         <div class="detection-section">
             <div class="section-header">
-                <h2><i class="fas fa-eye"></i> Live Detection</h2>
+                <h2>Live Detection</h2>
                 <div class="mode-switch">
                     <button class="mode-btn active" data-mode="standard">
-                        <i class="fas fa-tachometer-alt"></i> Standard
+                        <i class="fas fa-video"></i> Standard
                     </button>
                     <button class="mode-btn" data-mode="advanced">
                         <i class="fas fa-chart-line"></i> Advanced
@@ -98,13 +89,10 @@
                 <div class="video-wrapper">
                     <video id="videoFeed" autoplay playsinline></video>
                     <canvas id="overlayCanvas"></canvas>
-                    <div class="connection-status" id="connectionStatus">
-                        <i class="fas fa-circle"></i> Connecting...
-                    </div>
                     <div class="detection-overlay" id="detectionOverlay">
                         <div class="prediction-badge" id="predictionBadge">
-                            <span class="prediction-label">Ready</span>
-                            <span class="prediction-confidence">0%</span>
+                            <span class="prediction-label">Detecting...</span>
+                            <span class="prediction-confidence" id="confidenceValue">0%</span>
                         </div>
                     </div>
                 </div>
@@ -120,7 +108,27 @@
                     <div class="panel-section">
                         <h3><i class="fas fa-chart-simple"></i> Confidence Scores</h3>
                         <div class="confidence-bars" id="confidenceBars">
-                            <!-- Dynamic confidence bars will be populated -->
+                            <div class="confidence-item">
+                                <span class="label">Hello</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="hello" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confHello">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">Thanks</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="thanks" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confThanks">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">I Love You</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="iloveyou" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confIloveyou">0%</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -130,28 +138,28 @@
                             <div class="history-placeholder">No predictions yet</div>
                         </div>
                     </div>
-
-                    <div class="panel-section">
-                        <h3><i class="fas fa-chart-line"></i> Performance</h3>
-                        <div class="performance-stats">
-                            <div class="perf-item">
-                                <span>Inference Time:</span>
-                                <strong id="inferenceTime">0ms</strong>
-                            </div>
-                            <div class="perf-item">
-                                <span>Queue Size:</span>
-                                <strong id="queueSize">0</strong>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
 
         <div class="gestures-section">
-            <h2><i class="fas fa-hands"></i> Supported Gestures</h2>
-            <div class="gestures-grid" id="gesturesGrid">
-                <!-- Dynamic gesture cards -->
+            <h2>Supported Gestures</h2>
+            <div class="gestures-grid">
+                <div class="gesture-card">
+                    <div class="gesture-icon">👋</div>
+                    <h3>Hello</h3>
+                    <p>Wave your hand or raise palm</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">👍</div>
+                    <h3>Thanks</h3>
+                    <p>Thumbs up or hand to chin</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">🤟</div>
+                    <h3>I Love You</h3>
+                    <p>ILY hand sign</p>
+                </div>
             </div>
         </div>
     </main>
@@ -180,17 +188,8 @@
                         <option value="batch">Batch (Stable)</option>
                     </select>
                 </div>
-                <div class="setting-group">
-                    <label>Voice Feedback</label>
-                    <input type="checkbox" id="voiceFeedbackToggle" checked>
-                </div>
             </div>
         </div>
-    </div>
-
-    <div class="toast-notification" id="toast"></div>
-    <div class="shortcuts-hint">
-        <i class="fas fa-keyboard"></i> Space: Start/Stop | S: Settings
     </div>
 
     <script src="script.js"></script>
