@@ -3,15 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SignSpeak Pro | 30+ Sign Language Gestures</title>
+    <title>SignSpeak Ultimate | Professional Sign Language AI</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="cursor-glow"></div>
     
-    <!-- Day/Night Toggle Button -->
+    <!-- Floating Action Button -->
+    <div class="fab-menu" id="fabMenu">
+        <button class="fab-main" id="fabMain">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div class="fab-options">
+            <button class="fab-option" data-action="screenshot"><i class="fas fa-camera"></i></button>
+            <button class="fab-option" data-action="share"><i class="fas fa-share-alt"></i></button>
+            <button class="fab-option" data-action="export"><i class="fas fa-download"></i></button>
+            <button class="fab-option" data-action="feedback"><i class="fas fa-comment"></i></button>
+        </div>
+    </div>
+    
+    <!-- Day/Night Toggle -->
     <button class="day-night-toggle" id="dayNightToggle">
         <i class="fas fa-sun"></i>
         <i class="fas fa-moon"></i>
@@ -21,18 +35,23 @@
         <div class="nav-container">
             <div class="logo">
                 <i class="fas fa-hands"></i>
-                <span>SignSpeak Pro</span>
-                <span class="badge-new">30+ Gestures</span>
+                <span>SignSpeak Ultimate</span>
+                <span class="badge-new">v3.0</span>
             </div>
             <div class="nav-links">
                 <a href="#" class="active">Home</a>
-                <a href="#">About</a>
-                <a href="#">Documentation</a>
-                <a href="#">Contact</a>
+                <a href="#">Dashboard</a>
+                <a href="#">Learn</a>
+                <a href="#">Community</a>
+                <a href="#">Support</a>
             </div>
             <div style="display: flex; gap: 10px;">
                 <button class="voice-cmd-btn" id="voiceCmdBtn" title="Voice Commands">
                     <i class="fas fa-microphone"></i>
+                </button>
+                <button class="notifications-btn" id="notificationsBtn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge">0</span>
                 </button>
                 <button class="theme-toggle" id="themeToggle">
                     <i class="fas fa-palette"></i>
@@ -42,16 +61,17 @@
     </nav>
 
     <main class="main">
+        <!-- Hero Section -->
         <div class="hero-section">
             <div class="hero-content">
-                <span class="badge">AI-Powered • 30+ Gestures</span>
+                <span class="badge">Professional Edition • 50+ Gestures</span>
                 <h1 class="hero-title">
-                    Bridge the Gap with
-                    <span class="gradient-text">Sign Language AI</span>
+                    Ultimate Sign Language
+                    <span class="gradient-text">AI Assistant</span>
                 </h1>
                 <p class="hero-desc">
-                    Real-time sign language detection using advanced LSTM neural networks. 
-                    Support for 30+ gestures with 98% accuracy.
+                    Professional real-time sign language detection with 98.5% accuracy. 
+                    Learn, practice, and communicate with our advanced AI system.
                 </p>
                 <div class="hero-buttons">
                     <button class="btn-primary" id="startDetection">
@@ -63,18 +83,18 @@
                     <button class="btn-outline" id="openSettings">
                         <i class="fas fa-cog"></i> Settings
                     </button>
-                    <button class="btn-outline" id="clearHistoryBtn">
-                        <i class="fas fa-trash-alt"></i> Clear
+                    <button class="btn-outline" id="openStats">
+                        <i class="fas fa-chart-line"></i> Stats
                     </button>
                 </div>
             </div>
             <div class="hero-stats">
                 <div class="stat-card">
-                    <div class="stat-number" id="statGestures">30</div>
+                    <div class="stat-number" id="statGestures">50</div>
                     <div class="stat-label">Gestures</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">98%</div>
+                    <div class="stat-number">98.5%</div>
                     <div class="stat-label">Accuracy</div>
                 </div>
                 <div class="stat-card">
@@ -82,108 +102,265 @@
                     <div class="stat-label">FPS</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="statWords">0</div>
-                    <div class="stat-label">Words Today</div>
+                    <div class="stat-number" id="statStreak">0</div>
+                    <div class="stat-label">Day Streak</div>
                 </div>
             </div>
         </div>
 
-        <div class="detection-section">
-            <div class="section-header">
-                <h2><i class="fas fa-eye"></i> Live Detection</h2>
-                <div class="mode-switch">
-                    <button class="mode-btn active" data-mode="standard">
-                        <i class="fas fa-tachometer-alt"></i> Standard
-                    </button>
-                    <button class="mode-btn" data-mode="advanced">
-                        <i class="fas fa-chart-line"></i> Advanced
-                    </button>
-                    <button class="mode-btn" data-mode="batch">
-                        <i class="fas fa-layer-group"></i> Batch
-                    </button>
-                </div>
-            </div>
-            
-            <div class="detection-container">
-                <div class="video-wrapper">
-                    <video id="videoFeed" autoplay playsinline></video>
-                    <canvas id="overlayCanvas"></canvas>
-                    <div class="connection-status" id="connectionStatus">
-                        <i class="fas fa-circle"></i> Disconnected
-                    </div>
-                    <div class="detection-overlay" id="detectionOverlay">
-                        <div class="prediction-badge" id="predictionBadge">
-                            <span class="prediction-label">Ready</span>
-                            <span class="prediction-confidence">0%</span>
-                        </div>
+        <!-- Main Dashboard Tabs -->
+        <div class="dashboard-tabs">
+            <button class="tab-btn active" data-tab="live">Live Detection</button>
+            <button class="tab-btn" data-tab="learn">Learn Mode</button>
+            <button class="tab-btn" data-tab="practice">Practice Zone</button>
+            <button class="tab-btn" data-tab="analytics">Analytics</button>
+            <button class="tab-btn" data-tab="community">Community</button>
+        </div>
+
+        <!-- Tab 1: Live Detection -->
+        <div class="tab-content active" id="liveTab">
+            <div class="detection-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-eye"></i> Live Detection</h2>
+                    <div class="mode-switch">
+                        <button class="mode-btn active" data-mode="standard">Standard</button>
+                        <button class="mode-btn" data-mode="advanced">Advanced</button>
+                        <button class="mode-btn" data-mode="batch">Batch</button>
+                        <button class="mode-btn" data-mode="precise">Precise</button>
                     </div>
                 </div>
                 
-                <div class="info-panel">
-                    <div class="panel-section">
-                        <h3><i class="fas fa-comment"></i> Current Sentence</h3>
-                        <div class="sentence-display" id="sentenceDisplay">
-                            <span class="placeholder">No gestures detected yet...</span>
+                <div class="detection-container">
+                    <div class="video-wrapper">
+                        <video id="videoFeed" autoplay playsinline></video>
+                        <canvas id="overlayCanvas"></canvas>
+                        <div class="connection-status" id="connectionStatus">
+                            <i class="fas fa-circle"></i> Disconnected
                         </div>
-                        <div class="sentence-actions">
-                            <button class="speak-sentence-btn" id="speakSentenceBtn">
-                                <i class="fas fa-volume-up"></i> Speak Sentence
-                            </button>
-                            <button class="copy-sentence-btn" id="copySentenceBtn">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
+                        <div class="detection-overlay">
+                            <div class="prediction-badge" id="predictionBadge">
+                                <span class="prediction-label">Ready</span>
+                                <span class="prediction-confidence">0%</span>
+                            </div>
                         </div>
+                        <div class="hand-tracking-overlay" id="handTrackingOverlay"></div>
                     </div>
                     
-                    <div class="panel-section">
-                        <h3><i class="fas fa-chart-simple"></i> Top 5 Predictions</h3>
-                        <div class="confidence-bars" id="confidenceBars">
-                            <!-- Dynamic content -->
+                    <div class="info-panel">
+                        <div class="panel-section">
+                            <h3><i class="fas fa-comment"></i> Live Transcription</h3>
+                            <div class="live-transcription" id="liveTranscription">
+                                <div class="transcription-text">Waiting for gestures...</div>
+                                <div class="transcription-tools">
+                                    <button id="copyTranscriptionBtn"><i class="fas fa-copy"></i> Copy</button>
+                                    <button id="shareTranscriptionBtn"><i class="fas fa-share"></i> Share</button>
+                                    <button id="saveTranscriptionBtn"><i class="fas fa-save"></i> Save</button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="panel-section">
-                        <h3><i class="fas fa-history"></i> Recent Predictions</h3>
-                        <div class="history-list" id="historyList">
-                            <div class="history-placeholder">No predictions yet</div>
+                        
+                        <div class="panel-section">
+                            <h3><i class="fas fa-chart-simple"></i> Real-time Confidence</h3>
+                            <div class="confidence-bars" id="confidenceBars"></div>
+                            <div class="confidence-chart-container">
+                                <canvas id="confidenceChart"></canvas>
+                            </div>
                         </div>
-                    </div>
+                        
+                        <div class="panel-section">
+                            <h3><i class="fas fa-history"></i> Session History</h3>
+                            <div class="history-list" id="historyList">
+                                <div class="history-placeholder">No predictions yet</div>
+                            </div>
+                        </div>
 
-                    <div class="panel-section">
-                        <h3><i class="fas fa-microphone"></i> Voice Commands</h3>
-                        <div class="voice-commands">
-                            <div class="command-badge" data-command="start">"Start Detection"</div>
-                            <div class="command-badge" data-command="stop">"Stop Detection"</div>
-                            <div class="command-badge" data-command="clear">"Clear History"</div>
-                            <div class="command-badge" data-command="mode">"Change Mode"</div>
-                            <div class="command-badge" data-command="help">"Help"</div>
-                        </div>
-                        <div class="voice-status" id="voiceStatus">
-                            <i class="fas fa-microphone-slash"></i> Click mic to start voice commands
+                        <div class="panel-section">
+                            <h3><i class="fas fa-microphone-alt"></i> Voice Assistant</h3>
+                            <div class="voice-assistant">
+                                <div class="assistant-messages" id="assistantMessages">
+                                    <div class="assistant-message">👋 Hi! I'm your SignSpeak assistant. Say "help" for commands!</div>
+                                </div>
+                                <div class="assistant-input">
+                                    <input type="text" id="assistantInput" placeholder="Type or speak a command...">
+                                    <button id="assistantSend"><i class="fas fa-paper-plane"></i></button>
+                                    <button id="assistantVoice"><i class="fas fa-microphone"></i></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="gestures-section">
-            <div class="section-header">
-                <h2><i class="fas fa-hands"></i> All Supported Gestures (30+)</h2>
-                <div class="gesture-search">
-                    <input type="text" id="gestureSearch" placeholder="Search gestures..." class="search-input">
-                    <i class="fas fa-search"></i>
+        <!-- Tab 2: Learn Mode -->
+        <div class="tab-content" id="learnTab">
+            <div class="learn-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-graduation-cap"></i> Interactive Learning</h2>
+                    <div class="learning-stats">
+                        <span>⭐ Level: <strong id="userLevel">Beginner</strong></span>
+                        <span>📊 Progress: <strong id="learningProgress">0%</strong></span>
+                    </div>
+                </div>
+                
+                <div class="learning-container">
+                    <div class="lesson-sidebar">
+                        <h3>Lessons</h3>
+                        <div class="lesson-list" id="lessonList">
+                            <!-- Dynamic lessons -->
+                        </div>
+                    </div>
+                    
+                    <div class="lesson-content">
+                        <div class="current-lesson" id="currentLesson">
+                            <h3 id="lessonTitle">Select a lesson to begin</h3>
+                            <div class="lesson-video">
+                                <video id="lessonVideo" controls>
+                                    <source src="" type="video/mp4">
+                                </video>
+                                <div class="lesson-practice-area">
+                                    <div class="practice-camera" id="practiceCamera">
+                                        <video id="practiceFeed" autoplay playsinline></video>
+                                        <canvas id="practiceCanvas"></canvas>
+                                    </div>
+                                    <div class="practice-feedback" id="practiceFeedback">
+                                        <div class="feedback-score">Score: 0%</div>
+                                        <div class="feedback-message">Position your hand correctly</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="gestures-grid" id="gesturesGrid">
-                <!-- Dynamic gesture cards will be populated -->
+        </div>
+
+        <!-- Tab 3: Practice Zone -->
+        <div class="tab-content" id="practiceTab">
+            <div class="practice-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-dumbbell"></i> Practice Zone</h2>
+                    <div class="practice-settings">
+                        <select id="practiceMode">
+                            <option value="timed">Timed Challenge</option>
+                            <option value="streak">Streak Mode</option>
+                            <option value="random">Random Quiz</option>
+                        </select>
+                        <button id="startPracticeBtn">Start Practice</button>
+                    </div>
+                </div>
+                
+                <div class="practice-container">
+                    <div class="practice-question">
+                        <div class="target-gesture" id="targetGesture">
+                            <span class="target-emoji">🤟</span>
+                            <span class="target-name">I Love You</span>
+                        </div>
+                        <div class="practice-timer" id="practiceTimer">00:00</div>
+                        <div class="practice-score" id="practiceScore">
+                            <span>Score: 0</span>
+                            <span>Streak: 0 🔥</span>
+                        </div>
+                    </div>
+                    
+                    <div class="practice-history">
+                        <h4>Practice History</h4>
+                        <div class="practice-results" id="practiceResults"></div>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <!-- Tab 4: Analytics -->
+        <div class="tab-content" id="analyticsTab">
+            <div class="analytics-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> Performance Analytics</h2>
+                    <div class="date-range">
+                        <button class="range-btn active" data-range="day">Day</button>
+                        <button class="range-btn" data-range="week">Week</button>
+                        <button class="range-btn" data-range="month">Month</button>
+                        <button class="range-btn" data-range="year">Year</button>
+                    </div>
+                </div>
+                
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Accuracy Trend</h3>
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Gesture Distribution</h3>
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Daily Activity</h3>
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>Learning Progress</h3>
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="achievements-section">
+                    <h3><i class="fas fa-trophy"></i> Achievements</h3>
+                    <div class="achievements-grid" id="achievementsGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 5: Community -->
+        <div class="tab-content" id="communityTab">
+            <div class="community-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Community Hub</h2>
+                    <button id="shareProgressBtn"><i class="fas fa-share-alt"></i> Share Progress</button>
+                </div>
+                
+                <div class="community-grid">
+                    <div class="leaderboard-card">
+                        <h3>🏆 Global Leaderboard</h3>
+                        <div class="leaderboard-list" id="leaderboardList"></div>
+                    </div>
+                    <div class="challenges-card">
+                        <h3>⚡ Daily Challenges</h3>
+                        <div class="challenges-list" id="challengesList"></div>
+                    </div>
+                    <div class="tips-card">
+                        <h3>💡 Pro Tips</h3>
+                        <div class="tips-list" id="tipsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gestures Library -->
+        <div class="gestures-library">
+            <div class="section-header">
+                <h2><i class="fas fa-book"></i> Complete Gesture Library (50+ Gestures)</h2>
+                <div class="library-controls">
+                    <input type="text" id="librarySearch" placeholder="Search gestures..." class="search-input">
+                    <select id="categoryFilter">
+                        <option value="all">All Categories</option>
+                        <option value="basics">Basics</option>
+                        <option value="greetings">Greetings</option>
+                        <option value="emotions">Emotions</option>
+                        <option value="actions">Actions</option>
+                        <option value="objects">Objects</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+            </div>
+            <div class="gestures-grid" id="gesturesGrid"></div>
         </div>
     </main>
 
+    <!-- Modals -->
     <div class="modal" id="settingsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Settings</h2>
+                <h2>Advanced Settings</h2>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
@@ -199,15 +376,15 @@
                 <div class="setting-group">
                     <label>Detection Mode</label>
                     <select id="detectionModeSelect">
-                        <option value="standard">Standard (Low Latency)</option>
-                        <option value="advanced">Advanced (High Accuracy)</option>
+                        <option value="standard">Standard (Fast)</option>
+                        <option value="advanced">Advanced (Balanced)</option>
                         <option value="batch">Batch (Stable)</option>
+                        <option value="precise">Precise (Slow)</option>
                     </select>
                 </div>
                 <div class="setting-group">
                     <label>Voice Feedback</label>
                     <input type="checkbox" id="voiceFeedbackToggle" checked>
-                    <span style="margin-left: 10px;">Enable voice announcements</span>
                 </div>
                 <div class="setting-group">
                     <label>Theme Mode</label>
@@ -216,26 +393,62 @@
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
                         <option value="neon">Neon</option>
+                        <option value="ocean">Ocean</option>
                     </select>
                 </div>
                 <div class="setting-group">
                     <label>Daily Goal</label>
                     <input type="number" id="dailyGoal" min="10" max="500" value="100">
-                    <span> gestures per day</span>
+                </div>
+                <div class="setting-group">
+                    <label>Data Sync</label>
+                    <button id="syncDataBtn" class="btn-outline">Sync to Cloud</button>
+                    <button id="exportDataBtn" class="btn-outline">Export Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="statsModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Detailed Statistics</h2>
+                <button class="modal-close-stats">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-summary">
+                    <div class="stat-item">
+                        <span class="stat-icon">🎯</span>
+                        <span class="stat-label">Total Gestures</span>
+                        <span class="stat-value" id="totalGesturesStat">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">⏱️</span>
+                        <span class="stat-label">Total Time</span>
+                        <span class="stat-value" id="totalTimeStat">0h</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">🏆</span>
+                        <span class="stat-label">Best Streak</span>
+                        <span class="stat-value" id="bestStreakStat">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">⭐</span>
+                        <span class="stat-label">Accuracy</span>
+                        <span class="stat-value" id="avgAccuracyStat">0%</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="toast-notification" id="toast"></div>
-    <div class="shortcuts-hint">
-        <i class="fas fa-keyboard"></i> Space: Start/Stop | V: Voice | S: Settings | D: Day/Night
-    </div>
-    
-    <!-- Achievement Popup -->
     <div class="achievement-popup" id="achievementPopup">
         <i class="fas fa-trophy"></i>
         <span id="achievementText">Achievement Unlocked!</span>
+    </div>
+    <div class="shortcuts-hint">
+        <i class="fas fa-keyboard"></i> Space: Start/Stop | T: Tabs | V: Voice | D: Theme | H: Help
     </div>
 
     <script src="script.js"></script>
