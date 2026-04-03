@@ -16,7 +16,7 @@
             <div class="logo">
                 <i class="fas fa-hands"></i>
                 <span>SignSpeak Pro</span>
-                <span class="badge-new">AI-Powered</span>
+                <span class="badge-new">CNN+LSTM</span>
             </div>
             <div class="nav-links">
                 <a href="#" class="active">Home</a>
@@ -38,14 +38,14 @@
     <main class="main">
         <div class="hero-section">
             <div class="hero-content">
-                <span class="badge">CNN + LSTM Hybrid • Real-time</span>
+                <span class="badge">AI-Powered • Real-time</span>
                 <h1 class="hero-title">
                     Advanced Sign Language
                     <span class="gradient-text">Detection System</span>
                 </h1>
                 <p class="hero-desc">
-                    Real-time sign language detection using hybrid CNN+LSTM neural networks with MediaPipe integration.
-                    Supports 15+ gestures with 98% accuracy.
+                    Real-time sign language detection using hybrid CNN+LSTM neural networks with MediaPipe.
+                    Supports multiple gestures with 98% accuracy.
                 </p>
                 <div class="hero-buttons">
                     <button class="btn-primary" id="startDetection">
@@ -64,7 +64,7 @@
             </div>
             <div class="hero-stats">
                 <div class="stat-card">
-                    <div class="stat-number" id="statGestures">15</div>
+                    <div class="stat-number" id="statGestures">7</div>
                     <div class="stat-label">Gestures</div>
                 </div>
                 <div class="stat-card">
@@ -99,7 +99,7 @@
                     <video id="videoFeed" autoplay playsinline></video>
                     <canvas id="overlayCanvas"></canvas>
                     <div class="connection-status" id="connectionStatus">
-                        <i class="fas fa-circle"></i> Connecting...
+                        <i class="fas fa-circle"></i> Disconnected
                     </div>
                     <div class="detection-overlay" id="detectionOverlay">
                         <div class="prediction-badge" id="predictionBadge">
@@ -118,9 +118,43 @@
                     </div>
                     
                     <div class="panel-section">
-                        <h3><i class="fas fa-chart-simple"></i> Confidence Scores</h3>
+                        <h3><i class="fas fa-chart-simple"></i> Top Predictions</h3>
                         <div class="confidence-bars" id="confidenceBars">
-                            <!-- Dynamic confidence bars will be populated -->
+                            <div class="confidence-item">
+                                <span class="label">Hello</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="hello" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confHello">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">Thanks</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="thanks" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confThanks">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">I Love You</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="iloveyou" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confIloveyou">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">Yes</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="yes" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confYes">0%</span>
+                            </div>
+                            <div class="confidence-item">
+                                <span class="label">No</span>
+                                <div class="bar-container">
+                                    <div class="bar" data-gesture="no" style="width: 0%"></div>
+                                </div>
+                                <span class="value" id="confNo">0%</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -135,12 +169,12 @@
                         <h3><i class="fas fa-chart-line"></i> Performance</h3>
                         <div class="performance-stats">
                             <div class="perf-item">
-                                <span>Inference Time:</span>
+                                <span>Inference:</span>
                                 <strong id="inferenceTime">0ms</strong>
                             </div>
                             <div class="perf-item">
-                                <span>Queue Size:</span>
-                                <strong id="queueSize">0</strong>
+                                <span>Status:</span>
+                                <strong id="perfStatus">Idle</strong>
                             </div>
                         </div>
                     </div>
@@ -151,7 +185,36 @@
         <div class="gestures-section">
             <h2><i class="fas fa-hands"></i> Supported Gestures</h2>
             <div class="gestures-grid" id="gesturesGrid">
-                <!-- Dynamic gesture cards -->
+                <div class="gesture-card">
+                    <div class="gesture-icon">👋</div>
+                    <h3>Hello</h3>
+                    <p>Wave your hand</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">👍</div>
+                    <h3>Thanks</h3>
+                    <p>Thumbs up</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">🤟</div>
+                    <h3>I Love You</h3>
+                    <p>ILY sign</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">✅</div>
+                    <h3>Yes</h3>
+                    <p>Nodding gesture</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">❌</div>
+                    <h3>No</h3>
+                    <p>Shaking gesture</p>
+                </div>
+                <div class="gesture-card">
+                    <div class="gesture-icon">🙏</div>
+                    <h3>Please</h3>
+                    <p>Praying hands</p>
+                </div>
             </div>
         </div>
     </main>
@@ -183,6 +246,7 @@
                 <div class="setting-group">
                     <label>Voice Feedback</label>
                     <input type="checkbox" id="voiceFeedbackToggle" checked>
+                    <span style="margin-left: 10px;">Enable voice announcements</span>
                 </div>
             </div>
         </div>
