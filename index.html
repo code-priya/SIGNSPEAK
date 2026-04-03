@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SignSpeak | Real-Time Sign Language Detection</title>
+    <title>SignSpeak Pro | 30+ Sign Language Gestures</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,11 +11,18 @@
 <body>
     <div class="cursor-glow"></div>
     
+    <!-- Day/Night Toggle Button -->
+    <button class="day-night-toggle" id="dayNightToggle">
+        <i class="fas fa-sun"></i>
+        <i class="fas fa-moon"></i>
+    </button>
+    
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
                 <i class="fas fa-hands"></i>
-                <span>SignSpeak</span>
+                <span>SignSpeak Pro</span>
+                <span class="badge-new">30+ Gestures</span>
             </div>
             <div class="nav-links">
                 <a href="#" class="active">Home</a>
@@ -23,23 +30,28 @@
                 <a href="#">Documentation</a>
                 <a href="#">Contact</a>
             </div>
-            <button class="theme-toggle" id="themeToggle">
-                <i class="fas fa-moon"></i>
-            </button>
+            <div style="display: flex; gap: 10px;">
+                <button class="voice-cmd-btn" id="voiceCmdBtn" title="Voice Commands">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-palette"></i>
+                </button>
+            </div>
         </div>
     </nav>
 
     <main class="main">
         <div class="hero-section">
             <div class="hero-content">
-                <span class="badge">AI-Powered</span>
+                <span class="badge">AI-Powered • 30+ Gestures</span>
                 <h1 class="hero-title">
                     Bridge the Gap with
                     <span class="gradient-text">Sign Language AI</span>
                 </h1>
                 <p class="hero-desc">
                     Real-time sign language detection using advanced LSTM neural networks. 
-                    Communicate seamlessly with our cutting-edge technology.
+                    Support for 30+ gestures with 98% accuracy.
                 </p>
                 <div class="hero-buttons">
                     <button class="btn-primary" id="startDetection">
@@ -51,11 +63,14 @@
                     <button class="btn-outline" id="openSettings">
                         <i class="fas fa-cog"></i> Settings
                     </button>
+                    <button class="btn-outline" id="clearHistoryBtn">
+                        <i class="fas fa-trash-alt"></i> Clear
+                    </button>
                 </div>
             </div>
             <div class="hero-stats">
                 <div class="stat-card">
-                    <div class="stat-number">3</div>
+                    <div class="stat-number" id="statGestures">30</div>
                     <div class="stat-label">Gestures</div>
                 </div>
                 <div class="stat-card">
@@ -63,18 +78,22 @@
                     <div class="stat-label">Accuracy</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">30ms</div>
-                    <div class="stat-label">Latency</div>
+                    <div class="stat-number" id="statFps">0</div>
+                    <div class="stat-label">FPS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="statWords">0</div>
+                    <div class="stat-label">Words Today</div>
                 </div>
             </div>
         </div>
 
         <div class="detection-section">
             <div class="section-header">
-                <h2>Live Detection</h2>
+                <h2><i class="fas fa-eye"></i> Live Detection</h2>
                 <div class="mode-switch">
                     <button class="mode-btn active" data-mode="standard">
-                        <i class="fas fa-video"></i> Standard
+                        <i class="fas fa-tachometer-alt"></i> Standard
                     </button>
                     <button class="mode-btn" data-mode="advanced">
                         <i class="fas fa-chart-line"></i> Advanced
@@ -89,10 +108,13 @@
                 <div class="video-wrapper">
                     <video id="videoFeed" autoplay playsinline></video>
                     <canvas id="overlayCanvas"></canvas>
+                    <div class="connection-status" id="connectionStatus">
+                        <i class="fas fa-circle"></i> Disconnected
+                    </div>
                     <div class="detection-overlay" id="detectionOverlay">
                         <div class="prediction-badge" id="predictionBadge">
-                            <span class="prediction-label">Detecting...</span>
-                            <span class="prediction-confidence" id="confidenceValue">0%</span>
+                            <span class="prediction-label">Ready</span>
+                            <span class="prediction-confidence">0%</span>
                         </div>
                     </div>
                 </div>
@@ -103,32 +125,20 @@
                         <div class="sentence-display" id="sentenceDisplay">
                             <span class="placeholder">No gestures detected yet...</span>
                         </div>
+                        <div class="sentence-actions">
+                            <button class="speak-sentence-btn" id="speakSentenceBtn">
+                                <i class="fas fa-volume-up"></i> Speak Sentence
+                            </button>
+                            <button class="copy-sentence-btn" id="copySentenceBtn">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="panel-section">
-                        <h3><i class="fas fa-chart-simple"></i> Confidence Scores</h3>
+                        <h3><i class="fas fa-chart-simple"></i> Top 5 Predictions</h3>
                         <div class="confidence-bars" id="confidenceBars">
-                            <div class="confidence-item">
-                                <span class="label">Hello</span>
-                                <div class="bar-container">
-                                    <div class="bar" data-gesture="hello" style="width: 0%"></div>
-                                </div>
-                                <span class="value" id="confHello">0%</span>
-                            </div>
-                            <div class="confidence-item">
-                                <span class="label">Thanks</span>
-                                <div class="bar-container">
-                                    <div class="bar" data-gesture="thanks" style="width: 0%"></div>
-                                </div>
-                                <span class="value" id="confThanks">0%</span>
-                            </div>
-                            <div class="confidence-item">
-                                <span class="label">I Love You</span>
-                                <div class="bar-container">
-                                    <div class="bar" data-gesture="iloveyou" style="width: 0%"></div>
-                                </div>
-                                <span class="value" id="confIloveyou">0%</span>
-                            </div>
+                            <!-- Dynamic content -->
                         </div>
                     </div>
                     
@@ -138,28 +148,34 @@
                             <div class="history-placeholder">No predictions yet</div>
                         </div>
                     </div>
+
+                    <div class="panel-section">
+                        <h3><i class="fas fa-microphone"></i> Voice Commands</h3>
+                        <div class="voice-commands">
+                            <div class="command-badge" data-command="start">"Start Detection"</div>
+                            <div class="command-badge" data-command="stop">"Stop Detection"</div>
+                            <div class="command-badge" data-command="clear">"Clear History"</div>
+                            <div class="command-badge" data-command="mode">"Change Mode"</div>
+                            <div class="command-badge" data-command="help">"Help"</div>
+                        </div>
+                        <div class="voice-status" id="voiceStatus">
+                            <i class="fas fa-microphone-slash"></i> Click mic to start voice commands
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="gestures-section">
-            <h2>Supported Gestures</h2>
-            <div class="gestures-grid">
-                <div class="gesture-card">
-                    <div class="gesture-icon">👋</div>
-                    <h3>Hello</h3>
-                    <p>Wave your hand or raise palm</p>
+            <div class="section-header">
+                <h2><i class="fas fa-hands"></i> All Supported Gestures (30+)</h2>
+                <div class="gesture-search">
+                    <input type="text" id="gestureSearch" placeholder="Search gestures..." class="search-input">
+                    <i class="fas fa-search"></i>
                 </div>
-                <div class="gesture-card">
-                    <div class="gesture-icon">👍</div>
-                    <h3>Thanks</h3>
-                    <p>Thumbs up or hand to chin</p>
-                </div>
-                <div class="gesture-card">
-                    <div class="gesture-icon">🤟</div>
-                    <h3>I Love You</h3>
-                    <p>ILY hand sign</p>
-                </div>
+            </div>
+            <div class="gestures-grid" id="gesturesGrid">
+                <!-- Dynamic gesture cards will be populated -->
             </div>
         </div>
     </main>
@@ -188,8 +204,38 @@
                         <option value="batch">Batch (Stable)</option>
                     </select>
                 </div>
+                <div class="setting-group">
+                    <label>Voice Feedback</label>
+                    <input type="checkbox" id="voiceFeedbackToggle" checked>
+                    <span style="margin-left: 10px;">Enable voice announcements</span>
+                </div>
+                <div class="setting-group">
+                    <label>Theme Mode</label>
+                    <select id="themeModeSelect">
+                        <option value="auto">Auto (System)</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="neon">Neon</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>Daily Goal</label>
+                    <input type="number" id="dailyGoal" min="10" max="500" value="100">
+                    <span> gestures per day</span>
+                </div>
             </div>
         </div>
+    </div>
+
+    <div class="toast-notification" id="toast"></div>
+    <div class="shortcuts-hint">
+        <i class="fas fa-keyboard"></i> Space: Start/Stop | V: Voice | S: Settings | D: Day/Night
+    </div>
+    
+    <!-- Achievement Popup -->
+    <div class="achievement-popup" id="achievementPopup">
+        <i class="fas fa-trophy"></i>
+        <span id="achievementText">Achievement Unlocked!</span>
     </div>
 
     <script src="script.js"></script>
