@@ -1,3 +1,6 @@
+// ==================== ULTIMATE SIGNSPEAK PRO ====================
+// Complete JavaScript with all enhanced features
+
 // DOM Elements
 const video = document.getElementById('videoFeed');
 const overlayCanvas = document.getElementById('overlayCanvas');
@@ -5,19 +8,25 @@ const startBtn = document.getElementById('startDetection');
 const stopBtn = document.getElementById('stopDetection');
 const settingsBtn = document.getElementById('openSettings');
 const settingsModal = document.getElementById('settingsModal');
+const statsModal = document.getElementById('statsModal');
 const themeToggle = document.getElementById('themeToggle');
-const sentenceDisplay = document.getElementById('sentenceDisplay');
+const dayNightToggle = document.getElementById('dayNightToggle');
+const sentenceDisplay = document.getElementById('liveTranscription');
 const thresholdSlider = document.getElementById('thresholdSlider');
 const thresholdValue = document.getElementById('thresholdValue');
 const cameraSelect = document.getElementById('cameraSelect');
 const detectionModeSelect = document.getElementById('detectionModeSelect');
 const modeBtns = document.querySelectorAll('.mode-btn');
-const confidenceValues = {
-    hello: document.getElementById('confHello'),
-    thanks: document.getElementById('confThanks'),
-    iloveyou: document.getElementById('confIloveyou')
-};
-const confidenceBars = document.querySelectorAll('.bar');
+const voiceCmdBtn = document.getElementById('voiceCmdBtn');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const voiceFeedbackToggle = document.getElementById('voiceFeedbackToggle');
+const connectionStatus = document.getElementById('connectionStatus');
+const statFps = document.getElementById('statFps');
+const statStreak = document.getElementById('statStreak');
+const openStatsBtn = document.getElementById('openStats');
+const fabMain = document.getElementById('fabMain');
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
 
 // State Variables
 let stream = null;
@@ -26,429 +35,256 @@ let ws = null;
 let currentMode = 'standard';
 let confidenceThreshold = 0.7;
 let sentence = [];
-let predictions = [];
 let ctx = overlayCanvas.getContext('2d');
+let frameInterval = null;
+let voiceEnabled = true;
+let wordsToday = 0;
+let currentStreak = 0;
+let bestStreak = 0;
+let totalGestures = 0;
+let sessionStartTime = Date.now();
+let practiceSession = null;
+let recognition = null;
+let isListening = false;
+let charts = {};
 
-// WebSocket URL - Update this when you have backend running
-let WEBSOCKET_URL = 'ws://localhost:8765';  // Change this to your ngrok URL for production
+// ==================== 50+ GESTURES DATABASE ====================
+const gesturesDB = [
+    // Basics
+    { name: 'Hello', emoji: '👋', description: 'Wave your hand', category: 'greetings', difficulty: 'easy' },
+    { name: 'Goodbye', emoji: '👋', description: 'Wave goodbye', category: 'greetings', difficulty: 'easy' },
+    { name: 'Thank You', emoji: '🙏', description: 'Hand to chin', category: 'polite', difficulty: 'easy' },
+    { name: 'Please', emoji: '🤲', description: 'Circular motion on chest', category: 'polite', difficulty: 'medium' },
+    { name: 'Sorry', emoji: '😔', description: 'Fist over heart', category: 'emotions', difficulty: 'medium' },
+    { name: 'Yes', emoji: '👍', description: 'Nodding fist', category: 'affirmative', difficulty: 'easy' },
+    { name: 'No', emoji: '👎', description: 'Thumb and fingers together', category: 'negative', difficulty: 'easy' },
+    
+    // Emotions
+    { name: 'Love', emoji: '❤️', description: 'Cross arms over chest', category: 'emotions', difficulty: 'medium' },
+    { name: 'Happy', emoji: '😊', description: 'Brush chest upward', category: 'emotions', difficulty: 'easy' },
+    { name: 'Sad', emoji: '😢', description: 'Fingers down face', category: 'emotions', difficulty: 'medium' },
+    { name: 'Angry', emoji: '😠', description: 'Claw hand motion', category: 'emotions', difficulty: 'hard' },
+    { name: 'Excited', emoji: '🤩', description: 'Both hands shake', category: 'emotions', difficulty: 'medium' },
+    { name: 'Tired', emoji: '😴', description: 'Hand on forehead', category: 'emotions', difficulty: 'easy' },
+    
+    // Actions
+    { name: 'Eat', emoji: '🍽️', description: 'Bring hand to mouth', category: 'actions', difficulty: 'easy' },
+    { name: 'Drink', emoji: '🥤', description: 'C-shape to mouth', category: 'actions', difficulty: 'easy' },
+    { name: 'Sleep', emoji: '😴', description: 'Hand on cheek', category: 'actions', difficulty: 'easy' },
+    { name: 'Work', emoji: '💼', description: 'Tap wrists together', category: 'actions', difficulty: 'medium' },
+    { name: 'Study', emoji: '📚', description: 'Hand reading motion', category: 'actions', difficulty: 'medium' },
+    { name: 'Play', emoji: '🎮', description: 'Thumbs up wiggle', category: 'actions', difficulty: 'easy' },
+    { name: 'Help', emoji: '🆘', description: 'Thumb up on palm', category: 'emergency', difficulty: 'easy' },
+    { name: 'Wait', emoji: '⏳', description: 'Hand wave stop', category: 'actions', difficulty: 'easy' },
+    
+    // People
+    { name: 'Family', emoji: '👨‍👩‍👧', description: 'Circle with hands', category: 'people', difficulty: 'hard' },
+    { name: 'Friend', emoji: '👫', description: 'Hook index fingers', category: 'people', difficulty: 'medium' },
+    { name: 'Mother', emoji: '👩', description: 'Thumb to chin', category: 'people', difficulty: 'easy' },
+    { name: 'Father', emoji: '👨', description: 'Thumb to forehead', category: 'people', difficulty: 'easy' },
+    { name: 'Teacher', emoji: '👨‍🏫', description: 'Hand from forehead', category: 'people', difficulty: 'medium' },
+    { name: 'Doctor', emoji: '👨‍⚕️', description: 'Tap wrist', category: 'people', difficulty: 'medium' },
+    
+    // Objects
+    { name: 'Water', emoji: '💧', description: 'W hand to mouth', category: 'objects', difficulty: 'easy' },
+    { name: 'Food', emoji: '🍕', description: 'Hand to mouth', category: 'objects', difficulty: 'easy' },
+    { name: 'Money', emoji: '💰', description: 'Tap palm', category: 'objects', difficulty: 'medium' },
+    { name: 'Car', emoji: '🚗', description: 'Steering wheel motion', category: 'objects', difficulty: 'medium' },
+    { name: 'House', emoji: '🏠', description: 'Roof shape with hands', category: 'objects', difficulty: 'medium' },
+    { name: 'Phone', emoji: '📱', description: 'C hand to ear', category: 'objects', difficulty: 'easy' },
+    
+    // Time
+    { name: 'Today', emoji: '📅', description: 'Tap wrist', category: 'time', difficulty: 'easy' },
+    { name: 'Tomorrow', emoji: '⏩', description: 'Thumb over shoulder', category: 'time', difficulty: 'medium' },
+    { name: 'Yesterday', emoji: '⏪', description: 'Thumb back', category: 'time', difficulty: 'medium' },
+    { name: 'Morning', emoji: '🌅', description: 'Arm across body', category: 'time', difficulty: 'hard' },
+    { name: 'Night', emoji: '🌙', description: 'Hand over head', category: 'time', difficulty: 'medium' },
+    
+    // Advanced
+    { name: 'Understand', emoji: '🧠', description: 'Point to head', category: 'advanced', difficulty: 'hard' },
+    { name: 'Beautiful', emoji: '🌸', description: 'Open hand circle face', category: 'advanced', difficulty: 'hard' },
+    { name: 'Promise', emoji: '🤝', description: 'X over heart', category: 'advanced', difficulty: 'hard' },
+    { name: 'Freedom', emoji: '🕊️', description: 'Hands open wide', category: 'advanced', difficulty: 'medium' },
+    { name: 'Peace', emoji: '☮️', description: 'Peace sign', category: 'advanced', difficulty: 'easy' },
+    { name: 'Respect', emoji: '🙌', description: 'Hands together bow', category: 'advanced', difficulty: 'medium' },
+    
+    // Numbers 1-10
+    { name: 'One', emoji: '1️⃣', description: 'Index finger up', category: 'numbers', difficulty: 'easy' },
+    { name: 'Two', emoji: '2️⃣', description: 'Two fingers up', category: 'numbers', difficulty: 'easy' },
+    { name: 'Three', emoji: '3️⃣', description: 'Three fingers up', category: 'numbers', difficulty: 'easy' },
+    { name: 'Four', emoji: '4️⃣', description: 'Four fingers up', category: 'numbers', difficulty: 'easy' },
+    { name: 'Five', emoji: '5️⃣', description: 'Open hand', category: 'numbers', difficulty: 'easy' },
+    { name: 'Six', emoji: '6️⃣', description: 'Thumb and pinky', category: 'numbers', difficulty: 'easy' },
+    { name: 'Seven', emoji: '7️⃣', description: 'Thumb, index, middle', category: 'numbers', difficulty: 'easy' },
+    { name: 'Eight', emoji: '8️⃣', description: 'Thumb and index', category: 'numbers', difficulty: 'easy' },
+    { name: 'Nine', emoji: '9️⃣', description: 'Curled index', category: 'numbers', difficulty: 'easy' },
+    { name: 'Ten', emoji: '🔟', description: 'Thumbs up shake', category: 'numbers', difficulty: 'easy' }
+];
 
-// Gesture mapping
-const gestureMap = {
-    0: 'hello',
-    1: 'thanks',
-    2: 'iloveyou'
-};
-
-const gestureLabels = {
-    hello: 'Hello 👋',
-    thanks: 'Thanks 👍',
-    iloveyou: 'I Love You 🤟'
-};
-
-// Initialize
+// ==================== INITIALIZATION ====================
 async function init() {
     await loadCameras();
     setupEventListeners();
     animateOverlay();
+    updateFPS();
+    loadStats();
+    populateGesturesGrid();
+    initVoiceCommands();
+    initCharts();
+    loadThemePreference();
+    initPracticeMode();
+    initFloatingMenu();
+    showToast('Welcome to SignSpeak Ultimate! 🎉', false);
 }
 
-// Load available cameras
-async function loadCameras() {
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        
-        cameraSelect.innerHTML = '';
-        videoDevices.forEach((device, index) => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.textContent = device.label || `Camera ${index + 1}`;
-            cameraSelect.appendChild(option);
+// Load saved stats
+function loadStats() {
+    const saved = localStorage.getItem('signspeak_ultimate');
+    if (saved) {
+        const stats = JSON.parse(saved);
+        currentStreak = stats.streak || 0;
+        bestStreak = stats.bestStreak || 0;
+        totalGestures = stats.totalGestures || 0;
+        statStreak.textContent = currentStreak;
+    }
+    updateStreak();
+}
+
+// Update streak
+function updateStreak() {
+    const lastActive = localStorage.getItem('lastActive');
+    const today = new Date().toDateString();
+    if (lastActive === today) return;
+    
+    if (lastActive && new Date(lastActive).getTime() === new Date(today).getTime() - 86400000) {
+        currentStreak++;
+    } else if (lastActive !== today) {
+        currentStreak = 1;
+    }
+    
+    if (currentStreak > bestStreak) bestStreak = currentStreak;
+    statStreak.textContent = currentStreak;
+    localStorage.setItem('lastActive', today);
+    saveStats();
+}
+
+// Save stats
+function saveStats() {
+    const stats = {
+        streak: currentStreak,
+        bestStreak: bestStreak,
+        totalGestures: totalGestures,
+        lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem('signspeak_ultimate', JSON.stringify(stats));
+}
+
+// Initialize charts
+function initCharts() {
+    const ctx1 = document.getElementById('confidenceChart')?.getContext('2d');
+    if (ctx1) {
+        charts.confidence = new Chart(ctx1, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Confidence', data: [], borderColor: '#6366f1', tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: false }
         });
-    } catch (error) {
-        console.error('Error loading cameras:', error);
     }
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    startBtn.addEventListener('click', startDetection);
-    stopBtn.addEventListener('click', stopDetection);
-    settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
-    document.querySelector('.modal-close').addEventListener('click', () => settingsModal.classList.remove('active'));
-    themeToggle.addEventListener('click', toggleTheme);
+// Populate gestures grid
+function populateGesturesGrid(searchTerm = '', category = 'all') {
+    const grid = document.getElementById('gesturesGrid');
+    const filtered = gesturesDB.filter(g => 
+        (category === 'all' || g.category === category) &&
+        (g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         g.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
     
-    thresholdSlider.addEventListener('input', (e) => {
-        confidenceThreshold = e.target.value / 100;
-        thresholdValue.textContent = `${e.target.value}%`;
-    });
+    grid.innerHTML = filtered.map(gesture => `
+        <div class="gesture-card" data-gesture="${gesture.name.toLowerCase()}">
+            <div class="gesture-icon">${gesture.emoji}</div>
+            <h3>${gesture.name}</h3>
+            <p>${gesture.description}</p>
+            <small style="color: var(--text-secondary);">
+                ${gesture.category} • ${gesture.difficulty}
+            </small>
+        </div>
+    `).join('');
     
-    modeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentMode = btn.dataset.mode;
-            if (detectionModeSelect) {
-                detectionModeSelect.value = currentMode;
-            }
-        });
-    });
-    
-    detectionModeSelect?.addEventListener('change', (e) => {
-        currentMode = e.target.value;
-        modeBtns.forEach(btn => {
-            if (btn.dataset.mode === currentMode) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-    });
-    
-    cameraSelect.addEventListener('change', async () => {
-        if (isDetecting) {
-            await restartStream();
-        }
-    });
-    
-    settingsModal.addEventListener('click', (e) => {
-        if (e.target === settingsModal) {
-            settingsModal.classList.remove('active');
-        }
-    });
+    document.getElementById('statGestures').textContent = gesturesDB.length;
 }
 
-// Toggle theme
-function toggleTheme() {
-    const html = document.documentElement;
-    const currentTheme = html.getAttribute('data-theme');
-    if (currentTheme === 'light') {
-        html.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        html.setAttribute('data-theme', 'light');
-        localStorage.setItem('theme', 'light');
+// Initialize practice mode
+function initPracticeMode() {
+    const startPractice = document.getElementById('startPracticeBtn');
+    if (startPractice) {
+        startPractice.addEventListener('click', startPracticeSession);
     }
 }
 
-// Load saved theme
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-}
-
-// Start detection
-async function startDetection() {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined }
-        });
-        video.srcObject = stream;
-        
-        await video.play();
-        
-        // Try to connect to WebSocket, if fails use demo mode
-        try {
-            ws = new WebSocket(WEBSOCKET_URL);
-            
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                isDetecting = true;
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
-            };
-            
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                updateUI(data);
-            };
-            
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                startMockDetection();
-            };
-            
-            ws.onclose = () => {
-                console.log('WebSocket closed');
-                if (isDetecting) {
-                    startMockDetection();
-                }
-            };
-            
-            sendFrames();
-        } catch (error) {
-            startMockDetection();
-        }
-        
-    } catch (error) {
-        console.error('Error starting detection:', error);
-        showError('Could not access camera. Please check permissions.');
-    }
-}
-
-// Mock detection for demo when backend not available
-let mockInterval;
-function startMockDetection() {
-    isDetecting = true;
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    startBtn.innerHTML = '<i class="fas fa-video"></i> Demo Mode';
+function startPracticeSession() {
+    const mode = document.getElementById('practiceMode').value;
+    const gestures = gesturesDB.filter(g => g.difficulty !== 'hard');
+    let currentIndex = 0;
+    let score = 0;
+    let streak = 0;
     
-    const gestures = ['hello', 'thanks', 'iloveyou'];
-    let idx = 0;
-    
-    if (mockInterval) clearInterval(mockInterval);
-    mockInterval = setInterval(() => {
-        if (!isDetecting) return;
-        const gesture = gestures[idx % gestures.length];
-        const scores = [0.1, 0.1, 0.1];
-        scores[idx % gestures.length] = 0.85 + Math.random() * 0.1;
-        updateUI({
-            prediction: gesture,
-            confidence: scores[idx % gestures.length],
-            sentence: [gesture],
-            confidence_scores: scores
-        });
-        idx++;
-    }, 1500);
-}
-
-// Send frames to backend via WebSocket
-async function sendFrames() {
-    async function sendFrame() {
-        if (!isDetecting || !ws || ws.readyState !== WebSocket.OPEN) {
-            requestAnimationFrame(sendFrame);
+    practiceSession = setInterval(() => {
+        if (currentIndex >= gestures.length) {
+            clearInterval(practiceSession);
+            showToast(`Practice complete! Score: ${score}/${gestures.length}`, false);
             return;
         }
         
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const imageData = canvas.toDataURL('image/jpeg', 0.7);
-        
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(imageData);
-        }
-        
-        requestAnimationFrame(sendFrame);
-    }
-    
-    if (video.videoWidth > 0) {
-        requestAnimationFrame(sendFrame);
-    } else {
-        video.addEventListener('loadedmetadata', () => requestAnimationFrame(sendFrame));
-    }
-}
-
-// Update UI with predictions
-function updateUI(data) {
-    const { prediction, confidence, sentence: newSentence, confidence_scores } = data;
-    
-    if (newSentence && newSentence.length > 0) {
-        sentence = newSentence;
-        updateSentenceDisplay();
-    }
-    
-    if (confidence_scores) {
-        updateConfidenceBars(confidence_scores);
-    }
-    
-    const badge = document.getElementById('predictionBadge');
-    if (badge && prediction) {
-        badge.innerHTML = `
-            <span class="prediction-label">${gestureLabels[prediction] || prediction}</span>
-            <span class="prediction-confidence">${Math.round(confidence * 100)}%</span>
+        const target = gestures[currentIndex];
+        document.getElementById('targetGesture').innerHTML = `
+            <span class="target-emoji">${target.emoji}</span>
+            <span class="target-name">${target.name}</span>
         `;
-    }
-    
-    if (confidenceValues[prediction]) {
-        confidenceValues[prediction].textContent = `${Math.round(confidence * 100)}%`;
-    }
-}
-
-// Update sentence display
-function updateSentenceDisplay() {
-    if (sentence.length === 0) {
-        sentenceDisplay.innerHTML = '<span class="placeholder">No gestures detected yet...</span>';
-        return;
-    }
-    
-    const sentenceText = sentence.map(g => gestureLabels[g] || g).join(' → ');
-    sentenceDisplay.innerHTML = sentenceText;
-    addToHistory(sentence[sentence.length - 1]);
-}
-
-// Update confidence bars
-function updateConfidenceBars(scores) {
-    const gestures = ['hello', 'thanks', 'iloveyou'];
-    gestures.forEach((gesture, index) => {
-        const score = scores[index] || 0;
-        const bar = document.querySelector(`.bar[data-gesture="${gesture}"]`);
-        const valueSpan = document.getElementById(`conf${gesture.charAt(0).toUpperCase() + gesture.slice(1)}`);
         
-        if (bar) {
-            bar.style.width = `${score * 100}%`;
-        }
-        if (valueSpan) {
-            valueSpan.textContent = `${Math.round(score * 100)}%`;
-        }
+        // Simulate practice feedback
+        setTimeout(() => {
+            const userScore = Math.random() > 0.3 ? 1 : 0;
+            if (userScore === 1) {
+                score++;
+                streak++;
+                showToast(`✓ Correct! +1 point`, false);
+            } else {
+                streak = 0;
+                showToast(`✗ Try again! The sign is ${target.name}`, true);
+            }
+            document.getElementById('practiceScore').innerHTML = `
+                <span>Score: ${score}</span>
+                <span>Streak: ${streak} 🔥</span>
+            `;
+            currentIndex++;
+        }, 3000);
+    }, 5000);
+}
+
+// Initialize floating menu
+function initFloatingMenu() {
+    let fabOpen = false;
+    fabMain.addEventListener('click', () => {
+        fabOpen = !fabOpen;
+        document.querySelector('.fab-options').classList.toggle('show', fabOpen);
+    });
+    
+    document.querySelectorAll('.fab-option').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const action = btn.dataset.action;
+            if (action === 'screenshot') takeScreenshot();
+            if (action === 'share') shareProgress();
+            if (action === 'export') exportData();
+            if (action === 'feedback') showFeedbackForm();
+        });
     });
 }
 
-// Add to history
-function addToHistory(gesture) {
-    const historyList = document.getElementById('historyList');
-    const historyItem = document.createElement('div');
-    historyItem.className = 'history-item';
-    historyItem.innerHTML = `
-        <span>${gestureLabels[gesture] || gesture}</span>
-        <span>${new Date().toLocaleTimeString()}</span>
-    `;
-    
-    historyList.insertBefore(historyItem, historyList.firstChild);
-    
-    while (historyList.children.length > 10) {
-        historyList.removeChild(historyList.lastChild);
-    }
-    
-    const placeholder = historyList.querySelector('.history-placeholder');
-    if (placeholder) {
-        placeholder.remove();
-    }
-}
-
-// Stop detection
-function stopDetection() {
-    isDetecting = false;
-    
-    if (mockInterval) {
-        clearInterval(mockInterval);
-        mockInterval = null;
-    }
-    
-    if (ws) {
-        ws.close();
-        ws = null;
-    }
-    
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-    
-    video.srcObject = null;
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    startBtn.innerHTML = '<i class="fas fa-play"></i> Start Detection';
-    
-    sentenceDisplay.innerHTML = '<span class="placeholder">No gestures detected yet...</span>';
-    updateConfidenceBars([0, 0, 0]);
-    
-    const badge = document.getElementById('predictionBadge');
-    if (badge) {
-        badge.innerHTML = `
-            <span class="prediction-label">Detecting...</span>
-            <span class="prediction-confidence" id="confidenceValue">0%</span>
-        `;
-    }
-}
-
-// Restart stream
-async function restartStream() {
-    if (isDetecting) {
-        stopDetection();
-        await startDetection();
-    }
-}
-
-// Animate overlay
-function animateOverlay() {
-    if (!ctx) return;
-    
-    const draw = () => {
-        if (!overlayCanvas || !video) return;
-        
-        overlayCanvas.width = video.clientWidth;
-        overlayCanvas.height = video.clientHeight;
-        
-        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        
-        if (isDetecting) {
-            const time = Date.now() / 1000;
-            const scanY = (Math.sin(time * 2) + 1) / 2 * overlayCanvas.height;
-            
-            ctx.beginPath();
-            ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.moveTo(0, scanY);
-            ctx.lineTo(overlayCanvas.width, scanY);
-            ctx.stroke();
-            
-            const cornerSize = 30;
-            ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
-            ctx.lineWidth = 3;
-            
-            ctx.beginPath();
-            ctx.moveTo(10, 20);
-            ctx.lineTo(10, 10);
-            ctx.lineTo(20, 10);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(overlayCanvas.width - 10, 20);
-            ctx.lineTo(overlayCanvas.width - 10, 10);
-            ctx.lineTo(overlayCanvas.width - 20, 10);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(10, overlayCanvas.height - 20);
-            ctx.lineTo(10, overlayCanvas.height - 10);
-            ctx.lineTo(20, overlayCanvas.height - 10);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(overlayCanvas.width - 10, overlayCanvas.height - 20);
-            ctx.lineTo(overlayCanvas.width - 10, overlayCanvas.height - 10);
-            ctx.lineTo(overlayCanvas.width - 20, overlayCanvas.height - 10);
-            ctx.stroke();
-        }
-        
-        requestAnimationFrame(draw);
-    };
-    
-    draw();
-}
-
-// Show error message
-function showError(message) {
-    const badge = document.getElementById('predictionBadge');
-    if (badge) {
-        badge.innerHTML = `
-            <span class="prediction-label" style="color: #ef4444;">⚠️ Error</span>
-            <span class="prediction-confidence" style="font-size: 10px;">${message}</span>
-        `;
-        setTimeout(() => {
-            if (!isDetecting) {
-                badge.innerHTML = `
-                    <span class="prediction-label">Detecting...</span>
-                    <span class="prediction-confidence" id="confidenceValue">0%</span>
-                `;
-            }
-        }, 3000);
-    }
-}
-
-// Cursor glow effect
-document.addEventListener('mousemove', (e) => {
-    const glow = document.querySelector('.cursor-glow');
-    if (glow) {
-        glow.style.transform = `translate(${e.clientX - 200}px, ${e.clientY - 200}px)`;
-    }
-});
-
-// Initialize
-init();
+function takeScreenshot() {
+    if (video.videoWidth > 0) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        canvas.toBl
