@@ -1,5 +1,5 @@
 import os
-import gdown
+import urllib.request
 import streamlit as st
 import torch
 import torch.nn as nn
@@ -7,7 +7,6 @@ from PIL import Image
 import numpy as np
 import cv2
 from torchvision import transforms
-import os
 
 # Try importing mediapipe
 try:
@@ -96,29 +95,34 @@ class SignLanguageCNN(nn.Module):
         x = self.fc_layers(x)
         return x
 
-@st.cache_resource
-import os
-import urllib.request
-
-MODEL_URL = " https://drive.google.com/uc?export=download&id=1P_HjoxgA0o-QQX7po5nGSRg1bHLCiBFn "
+# Model download configuration
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1P_HjoxgA0o-QQX7po5nGSRg1bHLCiBFn"
 MODEL_PATH = "model.pth"
 
 def download_model():
+    """Download model from Google Drive if not exists"""
     if not os.path.exists(MODEL_PATH):
-        print("Downloading model...")
-        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-        print("Download complete!")
+        with st.spinner("📥 Downloading model... This may take a moment."):
+            try:
+                # Clean the URL (remove spaces)
+                clean_url = MODEL_URL.strip()
+                urllib.request.urlretrieve(clean_url, MODEL_PATH)
+                st.success("✅ Model downloaded successfully!")
+            except Exception as e:
+                st.error(f"Failed to download model: {str(e)}")
+                return False
+    return True
 
+@st.cache_resource
 def load_model():
-    download_model()   # 👈 ADD THIS LINE
-
-    model = SignLanguageCNN(num_classes=26)  # or your class count
-    model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
-    model.eval()
-    return model
+    """Load the trained model"""
+    # Download model if needed
+    if not download_model():
+        return None, None, None, None
     
     try:
-        checkpoint = torch.load('model.pth', map_location='cpu')
+        # Load checkpoint
+        checkpoint = torch.load(MODEL_PATH, map_location='cpu')
         
         # Get model parameters
         classes = checkpoint['classes']
@@ -131,6 +135,7 @@ def load_model():
         model.eval()
         
         return model, classes, img_size, transform_params
+        
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None, None, None, None
@@ -194,12 +199,12 @@ def main():
     
     # Load model
     model_data = load_model()
-    if model_data is None:
-        st.info("👆 Please run train.py first to train the model")
+    if model_data is None or model_data[0] is None:
+        st.error("⚠️ Could not load the model. Please check your internet connection and try again.")
         return
     
     model, classes, img_size, transform_params = model_data
-    st.success(f"✅ Model loaded! Recognizes {len(classes)} letters")
+    st.success(f"✅ Model loaded! Recognizes {len(classes)} letters: {', '.join(classes[:5])}...")
     
     # Input selection
     input_method = st.radio(
@@ -243,6 +248,8 @@ def main():
             with col2:
                 st.markdown("**Detected Hand**")
                 st.image(processed_image, use_container_width=True)
+        elif use_hand_detection and not MEDIAPIPE_AVAILABLE:
+            st.warning("MediaPipe not installed. Hand detection disabled.")
         
         # Predict button
         if st.button("🔍 Predict", type="primary"):
