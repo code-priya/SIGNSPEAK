@@ -100,7 +100,7 @@ class SignLanguageCNN(nn.Module):
 import os
 import urllib.request
 
-MODEL_URL = " 1P_HjoxgA0o-QQX7po5nGSRg1bHLCiBFn "
+MODEL_URL = " https://drive.google.com/uc?export=download&id=1P_HjoxgA0o-QQX7po5nGSRg1bHLCiBFn "
 MODEL_PATH = "model.pth"
 
 def download_model():
