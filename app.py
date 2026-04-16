@@ -97,11 +97,25 @@ class SignLanguageCNN(nn.Module):
         return x
 
 @st.cache_resource
+import os
+import urllib.request
+
+MODEL_URL = " 1P_HjoxgA0o-QQX7po5nGSRg1bHLCiBFn "
+MODEL_PATH = "model.pth"
+
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+        print("Downloading model...")
+        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        print("Download complete!")
+
 def load_model():
-    """Load the trained model"""
-    if not os.path.exists('model.pth'):
-        st.error("⚠️ Model file 'model.pth' not found. Please run train.py first!")
-        return None, None, None, None
+    download_model()   # 👈 ADD THIS LINE
+
+    model = SignLanguageCNN(num_classes=26)  # or your class count
+    model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
+    model.eval()
+    return model
     
     try:
         checkpoint = torch.load('model.pth', map_location='cpu')
